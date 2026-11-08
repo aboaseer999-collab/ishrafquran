@@ -5,12 +5,17 @@
 /* جسر GitHub ← Apps Script: البيانات تبقى في Google Sheets وتُطلب عبر الـ API فقط */
 (function(){
   var API_URL='https://script.google.com/macros/s/AKfycbzpDJKLle8sT7AyxX_EhFNbRkYm2aE4Ztd3dToGb_qaZZwX4YtNMEBc5xBAR5M7aq4r/exec';
-  var ACTIONS={studentResultRequest:'studentresult'};
+  var ACTIONS={
+    studentResultRequest:function(p){return Object.assign({},p||{},{action:'studentresult'});},
+    getAvailableSlotsForVenue:function(venue,groupName){return {action:'registrationslots',venue:venue,groupName:groupName};},
+    submitStudentRegistration:function(data){return {action:'registrationsubmit',data:data||{}};},
+    getPublicDashboardData:function(filters){return {action:'publicdashboard',filters:filters||{}};}
+  };
   function runner(ok,fail){
-    var api={withSuccessHandler:function(f){return runner(f,fail);},withFailureHandler:function(f){return runner(ok,f);}};
+    var api={withSuccessHandler:function(f){return runner(f,fail);},withFailureHandler:function(f){return runner(ok,f);},withUserObject:function(){return api;}};
     Object.keys(ACTIONS).forEach(function(name){
-      api[name]=function(payload){
-        var body=Object.assign({},payload||{},{action:ACTIONS[name]});
+      api[name]=function(){
+        var body=ACTIONS[name].apply(null,arguments);
         fetch(API_URL,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(body)})
           .then(function(r){return r.json();})
           .then(function(d){if(ok)ok(d);})
