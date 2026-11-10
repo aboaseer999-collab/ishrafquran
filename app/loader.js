@@ -141,14 +141,105 @@
         false);
       return;
     }
-    post({ action: 'apppage', params: params })
+    var key = cacheKey(params);
+    var cached = key ? cacheGet(key) : null;
+    var fresh = fetchPage(params).then(function (d) {
+      if (key) cacheSet(key, d);
+      return d;
+    });
+
+    if (cached) {
+      // عرض فوري من النسخة المحفوظة، وتحديثها في الخلفية للزيارة التالية.
+      render(cached.html, cached.title);
+      fresh.catch(function () {});
+      schedulePrefetch();
+      return;
+    }
+
+    fresh
       .then(function (d) {
-        if (!d || !d.ok || typeof d.html !== 'string') throw new Error((d && d.message) || 'استجابة غير متوقعة');
         render(d.html, d.title);
+        schedulePrefetch();
       })
       .catch(function () {
         showMessage('تعذر تحميل الصفحة', 'تحقق من الاتصال بالإنترنت ثم أعد المحاولة.', true);
       });
+  }
+
+  /* ---------- تسريع: حفظ هيكل الصفحات في المتصفح وتحميل الصفحات التالية مسبقاً ----------
+   * يُحفظ HTML الصفحة فقط (وهو عام ومتاح لأي زائر)، ولا تُحفظ أي بيانات طلاب أو جلسات.
+   * الصفحات التي في رابطها تذكرة أو رمز دخول لا تُحفظ أبداً. */
+  var CACHE_PREFIX = 'ishraf:page:v1:';
+
+  function fetchPage(params) {
+    return post({ action: 'apppage', params: params }).then(function (d) {
+      if (!d || !d.ok || typeof d.html !== 'string') throw new Error((d && d.message) || 'استجابة غير متوقعة');
+      return { html: d.html, title: d.title || '' };
+    });
+  }
+
+  function cacheKey(params) {
+    var keys = Object.keys(params);
+    for (var i = 0; i < keys.length; i++) if (keys[i] !== 'page') return null;
+    return CACHE_PREFIX + String(params.page || '').trim().toLowerCase();
+  }
+
+  function cacheGet(key) {
+    try {
+      var raw = localStorage.getItem(key);
+      if (!raw) return null;
+      var d = JSON.parse(raw);
+      return d && typeof d.html === 'string' ? d : null;
+    } catch (e) { return null; }
+  }
+
+  function cacheSet(key, d) {
+    try {
+      localStorage.setItem(key, JSON.stringify({ html: d.html, title: d.title, t: Date.now() }));
+    } catch (e) {
+      try {
+        Object.keys(localStorage).forEach(function (k) { if (k.indexOf(CACHE_PREFIX) === 0) localStorage.removeItem(k); });
+        localStorage.setItem(key, JSON.stringify({ html: d.html, title: d.title, t: Date.now() }));
+      } catch (e2) {}
+    }
+  }
+
+  function linkedPages() {
+    var pages = [];
+    try {
+      Array.prototype.forEach.call(document.querySelectorAll('a[href]'), function (a) {
+        var u = new URL(a.getAttribute('href'), location.href);
+        if (u.origin !== ORIGIN) return;
+        var page = null;
+        if (u.pathname === '/' && !u.search) page = '';
+        else if (u.pathname === '/register/') page = 'register';
+        else if (u.pathname === '/result/') page = 'result';
+        else if (u.pathname === '/app/') {
+          var ks = []; u.searchParams.forEach(function (v, k) { ks.push(k); });
+          if (ks.length === 1 && ks[0] === 'page') page = u.searchParams.get('page');
+          else if (!ks.length) page = '';
+        }
+        if (page !== null && pages.indexOf(page) === -1) pages.push(page);
+      });
+    } catch (e) {}
+    return pages;
+  }
+
+  function schedulePrefetch() {
+    setTimeout(function () {
+      var queue = linkedPages().filter(function (p) {
+        return !cacheGet(CACHE_PREFIX + String(p).toLowerCase());
+      }).slice(0, 6);
+      (function next() {
+        if (!queue.length) return;
+        var p = queue.shift();
+        var params = p ? { page: p } : {};
+        fetchPage(params)
+          .then(function (d) { cacheSet(cacheKey(params), d); })
+          .catch(function () {})
+          .then(function () { setTimeout(next, 300); });
+      })();
+    }, 2500);
   }
 
   start();
