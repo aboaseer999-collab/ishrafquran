@@ -1,0 +1,36 @@
+name: تحديث النسخ الجاهزة للصفحات
+
+on:
+  schedule:
+    - cron: '7,37 * * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: snapshot
+  cancel-in-progress: false
+
+jobs:
+  snapshot:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: جلب الصفحات من Apps Script
+        run: node scripts/snapshot.mjs
+      - name: حفظ التغييرات إن وُجدت
+        run: |
+          if [ -n "$(git status --porcelain app/pages)" ]; then
+            git config user.name "ishraf-snapshot-bot"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add app/pages
+            git commit -m "تحديث النسخ الجاهزة للصفحات"
+            git push
+          else
+            echo "لا تغييرات"
+          fi
