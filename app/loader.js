@@ -149,12 +149,25 @@
         false);
       return;
     }
+    // صفحات المنسوبين تُفتح برابط فيه تذكرة تنقّل؛ الصفحة نفسها لا تختلف إلا في قيمة التذكرة
+    // داخل متغير NAV_TICKET، فنعرض النسخة الجاهزة ونضع التذكرة فيها داخل المتصفح.
+    var ticket = null;
+    var keysNow = Object.keys(params);
+    if (keysNow.indexOf('ticket') !== -1 && keysNow.every(function (k) { return k === 'page' || k === 'ticket'; }) &&
+        /^[A-Za-z0-9]{8,300}$/.test(String(params.ticket))) {
+      ticket = String(params.ticket);
+      params = { page: params.page };
+    }
     var key = cacheKey(params);
     var cached = key ? cacheGet(key) : null;
     var fresh = fetchPage(params).then(function (d) {
       if (key) cacheSet(key, d);
       return d;
     });
+    if (ticket) {
+      var origRender = render;
+      render = function (html, title) { origRender(injectTicket(html, ticket), title); };
+    }
 
     if (cached) {
       // عرض فوري من النسخة المحفوظة، وتحديثها في الخلفية للزيارة التالية.
@@ -179,6 +192,12 @@
       snap.catch(function () {
         if (!done) showMessage('تعذر تحميل الصفحة', 'تحقق من الاتصال بالإنترنت ثم أعد المحاولة.', true);
       });
+    });
+  }
+
+  function injectTicket(html, ticket) {
+    return html.replace(/((?:NAV_TICKET|EMBEDDED_NAVIGATION_TICKET)\s*=\s*)(["'])\2/g, function (m, pre, q) {
+      return pre + q + ticket + q;
     });
   }
 
