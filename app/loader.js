@@ -128,7 +128,7 @@
     document.open();
     document.write(html);
     document.close();
-    if (title && !document.title) document.title = title;
+    if (title) document.title = title;
   }
 
   function start() {
