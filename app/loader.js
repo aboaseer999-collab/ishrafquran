@@ -117,6 +117,12 @@
   }
 
   function render(html, title) {
+    // لا يصح استبدال الصفحة أثناء قراءة المتصفح لها (يحدث مع النسخة المحفوظة لأنها فورية)،
+    // فننتظر حتى تكتمل قراءة الهيكل ثم نعرض.
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', function () { render(html, title); }, { once: true });
+      return;
+    }
     html = mapString(html);
     // النافذة نفسها تبقى بعد document.open، فنثبّت البديل قبلها ونعيد تثبيته احتياطاً داخل الصفحة.
     window.__ishrafInstall = installGoogleShim;
