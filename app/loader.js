@@ -156,13 +156,34 @@
       return;
     }
 
-    fresh
+    // أول زيارة: نسخة جاهزة من الصفحة على GitHub (تُحدَّث تلقائياً كل نصف ساعة)،
+    // وفي الوقت نفسه نطلب النسخة الحية؛ أيهما وصل أولاً يُعرض.
+    var done = false;
+    function show(d) {
+      if (done || !d) return;
+      done = true;
+      render(d.html, d.title);
+      schedulePrefetch();
+    }
+    var snap = key ? fetchSnapshot(page) : Promise.reject(new Error('no snapshot'));
+    snap.then(show).catch(function () {});
+    fresh.then(show).catch(function () {
+      snap.catch(function () {
+        if (!done) showMessage('تعذر تحميل الصفحة', 'تحقق من الاتصال بالإنترنت ثم أعد المحاولة.', true);
+      });
+    });
+  }
+
+  var SNAPSHOT_PAGES = ['', 'admin', 'register', 'result', 'dataentry', 'direct', 'summary', 'rewards',
+    'deliveries', 'certificates', 'visits', 'executive', 'schedule'];
+
+  function fetchSnapshot(page) {
+    if (SNAPSHOT_PAGES.indexOf(page) === -1) return Promise.reject(new Error('no snapshot'));
+    return fetch(ORIGIN + '/app/pages/' + (page || 'home') + '.json', { cache: 'no-cache' })
+      .then(function (r) { if (!r.ok) throw new Error('no snapshot'); return r.json(); })
       .then(function (d) {
-        render(d.html, d.title);
-        schedulePrefetch();
-      })
-      .catch(function () {
-        showMessage('تعذر تحميل الصفحة', 'تحقق من الاتصال بالإنترنت ثم أعد المحاولة.', true);
+        if (!d || typeof d.html !== 'string') throw new Error('bad snapshot');
+        return { html: d.html, title: d.title || '' };
       });
   }
 
@@ -234,7 +255,8 @@
         if (!queue.length) return;
         var p = queue.shift();
         var params = p ? { page: p } : {};
-        fetchPage(params)
+        fetchSnapshot(String(p).toLowerCase())
+          .catch(function () { return fetchPage(params); })
           .then(function (d) { cacheSet(cacheKey(params), d); })
           .catch(function () {})
           .then(function () { setTimeout(next, 300); });
