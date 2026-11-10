@@ -64,8 +64,10 @@
             setTimeout(function () { if (ok) ok(APP, userObject); }, 0);
             return;
           }
+          var t0 = Date.now();
           post({ action: 'apprpc', fn: name, args: args })
             .then(function (d) {
+              try { if (localStorage.getItem('ishraf:debug') === '1') console.info('[ishraf-rpc] ' + name + ' ' + (Date.now() - t0) + 'ms'); } catch (e) {}
               if (d && d.__appRpc) {
                 if (d.ok) { if (ok) ok(mapDeep(d.value), userObject); }
                 else {
