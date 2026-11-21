@@ -101,7 +101,7 @@ function mockServer({ appboot }) {
 }
 
 async function scenario(browser, base, { appboot }) {
-  const ctx = await browser.newContext();
+  const ctx = await browser.newContext({ serviceWorkers: 'block' });
   const mock = mockServer({ appboot });
   await ctx.route('https://script.google.com/**', mock.handle);
   await ctx.route('**/app/pages/*.json', route => {

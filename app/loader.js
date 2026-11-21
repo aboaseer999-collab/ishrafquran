@@ -509,6 +509,21 @@
     });
   }
 
+  /* ---------- تطبيق على الشاشة الرئيسية (PWA) ----------
+   * الصفحة تُستبدل بالكامل عند العرض، فنضيف رابط التطبيق والأيقونات إلى رأسها الجديد. */
+  var PWA_HEAD = '<link rel="manifest" href="/app/manifest.webmanifest">' +
+    '<meta name="theme-color" content="#1d4a58">' +
+    '<meta name="mobile-web-app-capable" content="yes">' +
+    '<meta name="apple-mobile-web-app-capable" content="yes">' +
+    '<meta name="apple-mobile-web-app-title" content="الإشراف">' +
+    '<link rel="apple-touch-icon" href="/app/icons/apple-touch-icon.png">';
+
+  function registerServiceWorker() {
+    var secure = location.protocol === 'https:' || /^(localhost|127\.0\.0\.1)$/.test(location.hostname);
+    if (TEST_MODE || !('serviceWorker' in navigator) || !secure) return;
+    setTimeout(function () { navigator.serviceWorker.register('/sw.js').catch(function () {}); }, 3000);
+  }
+
   var rendered = false;
   function render(html, title) {
     if (rendered) return;
@@ -523,7 +538,7 @@
     window.__ishrafInstall = installGoogleShim;
     installGoogleShim(window);
     var shim = '<script>if(!(window.google&&window.google.script&&window.google.script.run)&&window.__ishrafInstall)' +
-      'window.__ishrafInstall(window);<\/script>';
+      'window.__ishrafInstall(window);<\/script>' + PWA_HEAD;
     if (/<head[^>]*>/i.test(html)) html = html.replace(/<head([^>]*)>/i, function (m) { return m + shim; });
     else html = shim + html;
     document.open();
@@ -537,6 +552,7 @@
     });
     setTimeout(function () { STATE.recording = false; }, 25000);
     testBadge();
+    registerServiceWorker();
   }
 
   /* ---------- نسخ الصفحات ---------- */
@@ -661,6 +677,9 @@
       }
       serverParams[k] = params[k];
     });
+
+    // نسخ الصفحات القديمة (قبل v244) لم تعد تُستخدم.
+    skeys(LS, 'ishraf:page:v1:').forEach(function (k) { sdel(LS, k); });
 
     STATE.page = canonicalPage(page);
     var stored = storedToken();
