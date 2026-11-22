@@ -11,13 +11,14 @@
   'use strict';
 
   var PROD_EXEC = 'https://script.google.com/macros/s/AKfycbzpDJKLle8sT7AyxX_EhFNbRkYm2aE4Ztd3dToGb_qaZZwX4YtNMEBc5xBAR5M7aq4r/exec';
-  // نشرات اختبار معتمدة فقط (يضيفها صاحب النظام). تُفعَّل بإضافة ?__test=1 للرابط وتُلغى بـ ?__test=0
-  // لا يُقبل أي رابط آخر من الرابط أو من المتصفح حتى لا تُوجَّه كلمات المرور إلى خادم غريب.
-  var TEST_EXECS = [];
+  // النشر التجريبي (لا يستخدمه المستخدمون). يعمل فقط من المسار الخاص /app-test/ على الدومين نفسه.
+  // لا يُقبل أي رابط خادم آخر من الرابط أو من المتصفح حتى لا تُوجَّه كلمات المرور إلى خادم غريب.
+  var TEST_EXEC = 'https://script.google.com/macros/s/AKfycbxIG1vD9Ojn1AJt5bOcsfdwY6rrBmLa16y39JHqwsd7uofBIEP2VwudRix6iRW6iug/exec';
+  var TEST_SITE = location.pathname.indexOf('/app-test/') === 0;
 
   var ORIGIN = location.origin;
   var HOME = ORIGIN + '/';
-  var APP = ORIGIN + '/app/';
+  var APP = ORIGIN + (TEST_SITE ? '/app-test/' : '/app/');
   var EXEC_RE = /https:\/\/script\.google\.com\/(?:a\/[^\/"'\s]+\/)?macros\/s\/[\w-]+\/exec(\?[^"'\s<>)`]*)?/g;
   var PUBLIC_PAGES = ['', 'home', 'dashboard', 'main', 'register', 'registration', 'studentregistration',
     'student-registration', 'result', 'studentresult', 'student-result'];
@@ -66,14 +67,8 @@
   }
 
   /* ---------- اختيار الخادم ---------- */
-  var EXEC = PROD_EXEC;
-  var TEST_MODE = false;
-  (function () {
-    var q = new URLSearchParams(location.search).get('__test');
-    if (q === '0') sdel(SS, 'ishraf:test');
-    else if (q === '1' && TEST_EXECS.length) sset(SS, 'ishraf:test', '1');
-    if (sget(SS, 'ishraf:test') === '1' && TEST_EXECS.length) { EXEC = TEST_EXECS[0]; TEST_MODE = true; }
-  })();
+  var EXEC = TEST_SITE ? TEST_EXEC : PROD_EXEC;
+  var TEST_MODE = TEST_SITE;
   if (TEST_MODE) { PAGE_PREFIX = 'ishraf:page:test:'; BOOT_PREFIX = 'ishraf:boot:test:'; DATA_PREFIX = 'ishraf:data:test:'; }
   var BOOT_OFF_KEY = 'ishraf:noboot:' + EXEC.slice(-16);
   var BOOT_OFF_RETRY = 60 * 60 * 1000;
