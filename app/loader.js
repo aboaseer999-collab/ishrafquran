@@ -34,7 +34,8 @@
     getSupervisorDashboardStats: 1, getSupervisorTodayTests: 1, getStudentSummaryPortalData: 1,
     getPendingStudentsForDirectTest: 1, getFieldVisits: 1, getFieldVisitOptions: 1,
     getFieldVisitExamData: 1, getExecutiveReports: 1, getExecutiveReportData: 1, getAuthorizedExecutiveReportData: 1,
-    getCertificateDeliveryData: 1, getRewardDeliveryData: 1, getCombinedDeliveryData: 1
+    getCertificateDeliveryData: 1, getRewardDeliveryData: 1, getCombinedDeliveryData: 1,
+    getViewerDashboardData: 1
   };
   // لا تُعرض من المحفوظ أبداً: قوائم يجب أن تكون حيّة لحظة العمل (مباشرة الاختبار).
   var NO_STALE = { getPendingStudentsForDirectTest: 1 };
@@ -348,7 +349,13 @@
   }
 
   function track(value) {
-    if (value && typeof value === 'object' && typeof value.token === 'string') knowToken(value.token);
+    if (value && typeof value === 'object') {
+      if (typeof value.token === 'string') knowToken(value.token);
+      // حساب "المطّلع": تُخفى أزرار التعديل والتنفيذ (الخادم يرفضها أصلاً).
+      if (typeof value.role === 'string' && value.role) {
+        try { document.documentElement.classList.toggle('ishraf-viewer', value.role.trim().toLowerCase() === 'viewer'); } catch (e) {}
+      }
+    }
     return value;
   }
 
@@ -552,14 +559,14 @@
 
   /* ---------- نسخ الصفحات ---------- */
   var SNAPSHOT_PAGES = ['', 'admin', 'register', 'result', 'dataentry', 'direct', 'summary', 'rewards',
-    'deliveries', 'certificates', 'visits', 'executive', 'schedule'];
+    'deliveries', 'certificates', 'visits', 'executive', 'schedule', 'viewer'];
   var PAGE_ALIASES = {
     home: '', dashboard: '', main: '', login: 'admin', supervisor: 'admin', registration: 'register',
     studentregistration: 'register', 'student-registration': 'register', studentresult: 'result',
     'student-result': 'result', 'data-entry': 'dataentry', entry: 'dataentry', directtest: 'direct',
     'direct-test': 'direct', studentsummary: 'summary', 'student-summary': 'summary',
     'certificate-delivery': 'certificates', 'field-visits': 'visits', 'executive-report': 'executive',
-    'today-tests': 'schedule', 'tests-schedule': 'schedule'
+    'today-tests': 'schedule', 'tests-schedule': 'schedule', overview: 'viewer', monitor: 'viewer'
   };
 
   function canonicalPage(page) {

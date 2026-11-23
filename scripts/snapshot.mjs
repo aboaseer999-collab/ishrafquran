@@ -3,7 +3,7 @@ import { writeFile, readFile, mkdir } from 'node:fs/promises';
 
 const EXEC = 'https://script.google.com/macros/s/AKfycbzpDJKLle8sT7AyxX_EhFNbRkYm2aE4Ztd3dToGb_qaZZwX4YtNMEBc5xBAR5M7aq4r/exec';
 const PAGES = ['', 'admin', 'register', 'result', 'dataentry', 'direct', 'summary', 'rewards',
-  'deliveries', 'certificates', 'visits', 'executive', 'schedule'];
+  'deliveries', 'certificates', 'visits', 'executive', 'schedule', 'viewer'];
 
 await mkdir('app/pages', { recursive: true });
 let changed = 0, failed = 0;
