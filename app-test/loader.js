@@ -348,7 +348,13 @@
   }
 
   function track(value) {
-    if (value && typeof value === 'object' && typeof value.token === 'string') knowToken(value.token);
+    if (value && typeof value === 'object') {
+      if (typeof value.token === 'string') knowToken(value.token);
+      // حساب "المطّلع": تُخفى أزرار التعديل والتنفيذ (الخادم يرفضها أصلاً).
+      if (typeof value.role === 'string' && value.role) {
+        try { document.documentElement.classList.toggle('ishraf-viewer', value.role.trim().toLowerCase() === 'viewer'); } catch (e) {}
+      }
+    }
     return value;
   }
 
